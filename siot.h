@@ -30,7 +30,6 @@ private:
   int lengthOfKey = 0;
   int tempOfkey = 0;
 
-  std::vector<String> key_vertor;
 
 public:
   void callback(char *topic, byte *payload, unsigned int length);
