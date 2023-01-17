@@ -1,6 +1,9 @@
+#include "WString.h"
+#include <sys/_intsup.h>
+#include "HardwareSerial.h"
 #include "WiFiClient.h"
 #include <HTTPClient.h>
-#include "siot.h"
+#include "MeteeKloud.h"
 #include <map>
 
 
@@ -15,7 +18,7 @@ WiFiClient wifiClient;
 
 
 
-std::map<String, int> value;
+std::map<String, float> value;
 
 //**********************************  **********************************//
 SIOT::SIOT()
@@ -45,13 +48,8 @@ SIOT &SIOT::begin(std::string boxId, std::string secret) {
   // Disconnect from the server
   http.end();
 
-  DeserializationError error = deserializeJson(*doc_, response.c_str());
-  if (error) {
-    Serial.print("JSON parsing failed: ");
-    Serial.println(error.c_str());
-    return *this;
-  }
-  this->canSubPub = (*doc_)["subpub"];
+
+  this->canSubPub = response.c_str();
 
   this->boxId = boxId;
   this->boxSecret = secret;
@@ -69,31 +67,35 @@ SIOT &SIOT::begin(std::string boxId, std::string secret) {
   std::string sub(this->canSubPub);
   sub.append(all);
 
+  Serial.println(sub.c_str());
+
   this->client.subscribe(sub.c_str());
   this->isReady = true;
 
   return *this;
 }
 
+
 void SIOT::callback(char *topic, byte *payload, unsigned int length) {
   // ...
-  DeserializationError error = deserializeJson(*doc_, payload);
-  if (error) {
-    // There was an error parsing the JSON payload
-    // ...
-    return;
-  } else {
-    // The JSON payload was successfully parsed
-    // Use strtok to split the string on the '/' character
-    char *token = strtok(topic, "/");
 
-    // Skip the first token (the "topic" part)
-    token = strtok(NULL, "/");
-    value[token] = (*doc_)["value"];
-    Serial.print("************************");
-    Serial.println(value[token]);
-    Serial.print("************************");
+  char *token = strtok(topic, "/");
+
+  String res ;
+
+  for (int i = 0; i < length; i++) {
+    res += String((char)payload[i]);
   }
+
+  float v = res.toFloat();
+  token = strtok(NULL, "/");
+  value[token] = v;
+
+
+  // Serial.println("************************");
+  // Serial.println(v);
+  // Serial.println(value[token]);
+  // Serial.println("************************");
 }
 
 void SIOT::run() {
@@ -120,7 +122,7 @@ void SIOT::reconnect() {
 }
 
 float SIOT::analogRead(char *key) {
-  float v = (*this->doc_)[key];
+  float v = value[key];
   return v;
 }
 
