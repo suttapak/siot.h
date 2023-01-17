@@ -2,46 +2,35 @@
 #define SIOT_LIBRARY_H
 
 #include "Arduino.h"
-#include "iostream"
-#include <ArduinoJson.h>
 #include <WiFi.h>
-#include <WiFiClient.h>
 #include <PubSubClient.h>
-#include <string>
 
-class SIOT
-{
+class SIOT {
 private:
-  DynamicJsonDocument *doc_;
   PubSubClient client;
-  WiFiClient wifiClient_;
   void reconnect();
   bool isbeginErrorState;
   bool isConnectServerState;
   bool isReady;
   // conf
-  char *ssid;
-  char *password;
-
-  std::string boxId;
-  std::string boxSecret;
-
+  const char *ssid;
+  const char *password;
+  const char *boxId;
+  const char *boxSecret;
   const char *canSubPub;
-  int lengthOfKey = 0;
-  int tempOfkey = 0;
 
 
 public:
-  void callback(char *topic, byte *payload, unsigned int length);
   SIOT();
-  SIOT &begin(std::string boxId, std::string secret);
+  SIOT &begin(const char *boxId, const char *secret);
   boolean isBeginError();
   boolean isConnectedServer();
+  void callback(char *topic, byte *payload, unsigned int length);
   void run();
-  uint8_t digitalRead(char *key);
-  float analogRead(char *key);
-  void digitalWrite(char *key, uint8_t val);
-  void analogWrite(char *key, float val);
+  uint8_t digitalRead(const char *key);
+  float analogRead(const char *key);
+  bool digitalWrite(const char *key, uint8_t val);
+  bool analogWrite(const char *key, float val);
 };
 
-#endif // SIOT_LIBRARY_H
+#endif  // SIOT_LIBRARY_H

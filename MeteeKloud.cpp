@@ -1,7 +1,4 @@
-#include "WString.h"
-#include <sys/_intsup.h>
-#include "HardwareSerial.h"
-#include "WiFiClient.h"
+#include <WiFiClient.h>
 #include <HTTPClient.h>
 #include "MeteeKloud.h"
 #include <map>
@@ -13,26 +10,21 @@ const char *SERVER_HOST = "https://api.rocket-translate.com/subpub/";
 #define MQTT_SERVER_PORT 1883
 
 //********************************** JSON Document size **********************************//
-const size_t JSON_DOCUMENT_SIZE = 2048;
 WiFiClient wifiClient;
-
-
 
 std::map<String, float> value;
 
 //**********************************  **********************************//
 SIOT::SIOT()
-  : doc_(new DynamicJsonDocument(JSON_DOCUMENT_SIZE)), client(wifiClient) {
+  : client(wifiClient) {
   this->isbeginErrorState = false;
   this->isConnectServerState = false;
-  this->doc_->clear();
-  this->wifiClient_ = wifiClient;
 }
 
-SIOT &SIOT::begin(std::string boxId, std::string secret) {
+SIOT &SIOT::begin(const char * boxId, const char * secret) {
   HTTPClient http;
   // Send an HTTP GET request to the server
-  String url = SERVER_HOST + String(boxId.c_str()) + "/" + String(secret.c_str());
+  String url = SERVER_HOST + String(boxId) + "/" + String(secret);
   http.begin(url.c_str());    // specify the URL
   int httpCode = http.GET();  // send the request
 
@@ -61,13 +53,12 @@ SIOT &SIOT::begin(std::string boxId, std::string secret) {
   this->client.setCallback([&](char *topic, byte *payload, unsigned int length) {
     this->callback(topic, payload, length);
   });
-  this->client.connect(clientId.c_str(), boxId.c_str(), boxSecret.c_str());
 
-  const char *all = "/#";
-  std::string sub(this->canSubPub);
-  sub.append(all);
+  if (this->client.connect(clientId.c_str(), boxId, boxSecret)) {
+    Serial.println("Connected server.");
+  }
 
-  Serial.println(sub.c_str());
+  String sub = String(this->canSubPub) + "/#";
 
   this->client.subscribe(sub.c_str());
   this->isReady = true;
@@ -76,15 +67,15 @@ SIOT &SIOT::begin(std::string boxId, std::string secret) {
 }
 
 
-void SIOT::callback(char *topic, byte *payload, unsigned int length) {
+void SIOT::callback( char *topic, byte *payload, unsigned int length) {
   // ...
 
   char *token = strtok(topic, "/");
 
-  String res ;
+  String res;
 
   for (int i = 0; i < length; i++) {
-    res += String((char)payload[i]);
+    res += String((const char)payload[i]);
   }
 
   float v = res.toFloat();
@@ -99,6 +90,9 @@ void SIOT::callback(char *topic, byte *payload, unsigned int length) {
 }
 
 void SIOT::run() {
+  if(!this->client.connected()) {
+    this->reconnect();
+  }
   this->client.loop();
 }
 
@@ -109,7 +103,7 @@ void SIOT::reconnect() {
     String clientId = "ESP8266Client-";
     clientId += String(random(0xffff), HEX);
     // Attempt to connect
-    if (this->client.connect(clientId.c_str(), this->boxId.c_str(), this->boxSecret.c_str())) {
+    if (this->client.connect(clientId.c_str(), this->boxId, this->boxSecret)) {
       Serial.println("connected");
     } else {
       Serial.print("failed, rc=");
@@ -121,46 +115,32 @@ void SIOT::reconnect() {
   }
 }
 
-float SIOT::analogRead(char *key) {
+float SIOT::analogRead(const char *key) {
   float v = value[key];
   return v;
 }
 
-uint8_t SIOT::digitalRead(char *key) {
+uint8_t SIOT::digitalRead(const char *key) {
   uint8_t v = value[key];
   return v;
 }
 
-void SIOT::digitalWrite(char *key, uint8_t val) {
+bool SIOT::digitalWrite(const char *key, uint8_t val) {
   if (val > 1)
     val = 1;
-  std::string json = "{\"value\": " + std::to_string(val) + "}";
 
-  // Convert the string to a const char*
-  const char *json_cstr = json.c_str();
 
-  std::string topic(this->canSubPub);
-  topic.append("/");
-  topic.append(key);
-
-  this->client.publish(topic.c_str(), json_cstr);
-}
+  String topic = String(this->canSubPub) + "/" + String(key);
+  return this->client.publish(topic.c_str(), String(val).c_str());
+} 
 
 boolean SIOT::isBeginError() {
   return this->isbeginErrorState;
 }
 
-void SIOT::analogWrite(char *key, float val) {
-  std::string json = "{\"value\": " + std::to_string(val) + "}";
-
-  // Convert the string to a const char*
-  const char *json_cstr = json.c_str();
-
-  std::string topic(this->canSubPub);
-  topic.append("/");
-  topic.append(key);
-
-  this->client.publish(topic.c_str(), json_cstr);
+bool SIOT::analogWrite(const char *key, float val) {
+    String topic = String(this->canSubPub) + "/" + String(key);
+  return this->client.publish(topic.c_str(), String(val).c_str());
 }
 
 bool SIOT::isConnectedServer() {
