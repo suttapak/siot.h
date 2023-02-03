@@ -1,17 +1,18 @@
-#ifndef SIOT_LIBRARY_H
-#define SIOT_LIBRARY_H
+#ifndef MATEEKLOUD_LIBRARY_H
+#define MATEEKLOUD_LIBRARY_H
 
 #include "Arduino.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-class SIOT {
+class MateeKloud
+{
 private:
   PubSubClient client;
   void reconnect();
   bool isbeginErrorState;
   bool isConnectServerState;
-  bool isReady;
+  bool isReadyState;
   // conf
   const char *ssid;
   const char *password;
@@ -19,12 +20,12 @@ private:
   const char *boxSecret;
   const char *canSubPub;
 
-
 public:
-  SIOT();
-  SIOT &begin(const char *boxId, const char *secret);
-  boolean isBeginError();
-  boolean isConnectedServer();
+  MateeKloud();
+  MateeKloud &begin(const char *boxId, const char *secret);
+  bool isBeginError();
+  bool isConnectedServer();
+  bool isReady();
   void callback(char *topic, byte *payload, unsigned int length);
   void run();
   uint8_t digitalRead(const char *key);
@@ -33,4 +34,4 @@ public:
   bool analogWrite(const char *key, float val);
 };
 
-#endif  // SIOT_LIBRARY_H
+#endif // MateeKloud_LIBRARY_H
